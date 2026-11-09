@@ -103,10 +103,6 @@
     .landing{height:100%;display:grid;place-items:center;padding:24px}.landing-card{max-width:420px;width:100%;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:28px;text-align:center}.landing-emoji{font-size:54px}.landing h2{margin:12px 0 8px}.landing p{color:var(--muted);font-size:14px;line-height:1.55}.landing a{display:block;margin-top:18px;background:#172033;color:white;text-decoration:none;padding:13px;border-radius:12px;font-weight:800}
     .toast{position:absolute;left:50%;bottom:calc(86px + var(--safe-bottom));transform:translateX(-50%) translateY(10px);opacity:0;pointer-events:none;background:#172033;color:white;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:750;transition:.2s;z-index:99}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     @media(min-width:761px){.app{box-shadow:0 20px 60px rgba(15,23,42,.15)}main{padding-left:18px;padding-right:18px}}
-    @media(prefers-color-scheme:dark){
-      :root{--bg:#0b1020;--card:#111827;--text:#eef2ff;--muted:#9ca3af;--line:#273145;--primary-soft:#172554}
-      .day-btn{background:#111827}.day-btn.active{background:#e5e7eb;color:#111827;border-color:#e5e7eb}.today-btn{background:#172554}.card,.event-done-btn{background:#111827}.time,.chip,.action,.tag,.info-icon,.metric{background:#182033;border-color:#273145;color:#cbd5e1}.event+.event,.check-row,.info-row,.budget-row{border-color:#1f2937}.bottom-nav{background:rgba(11,16,32,.92);border-color:#253047}.landing-card{background:#111827}.event-icon{background:#182033}
-    }
   </style>
 </head>
 <body>
@@ -147,8 +143,9 @@
   let appearance = 'light';
 
   function loadAppearance(){
-    try{ appearance = localStorage.getItem(APPEARANCE_KEY) || 'light'; }catch(e){ appearance='light'; }
-    if(appearance!=='dark') appearance='light';
+    // Always start in light mode, regardless of OS/browser appearance or a previous visit.
+    appearance = 'light';
+    try{ localStorage.removeItem(APPEARANCE_KEY); }catch(e){}
   }
   function applyAppearance(){
     document.body.classList.toggle('dark-mode', appearance==='dark');
@@ -162,8 +159,8 @@
     if(meta) meta.setAttribute('content', appearance==='dark' ? '#0f172a' : '#7c3aed');
   }
   function toggleAppearance(){
+    // Manual toggle applies only for the current page session; reload starts light again.
     appearance = appearance==='dark' ? 'light' : 'dark';
-    try{ localStorage.setItem(APPEARANCE_KEY, appearance); }catch(e){}
     applyAppearance();
   }
 
