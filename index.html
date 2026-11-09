@@ -37,8 +37,8 @@
     body.dark-mode .bottom-nav{background:rgba(15,23,42,.92);border-color:#273246}
     body.dark-mode .landing-card{background:var(--card)}
     .hero-actions{display:flex;gap:8px;flex:0 0 auto}
-    .theme-toggle{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.24);border-radius:12px;min-width:42px;height:42px;display:grid;place-items:center;cursor:pointer;font-size:18px}
-    .theme-toggle:focus-visible,.share-btn:focus-visible{outline:3px solid rgba(255,255,255,.75);outline-offset:3px}
+    .theme-toggle,.lang-toggle{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.24);border-radius:12px;min-width:42px;height:42px;display:grid;place-items:center;cursor:pointer;font-size:18px}.lang-toggle{min-width:46px;font-size:16px}
+    .theme-toggle:focus-visible,.lang-toggle:focus-visible,.share-btn:focus-visible{outline:3px solid rgba(255,255,255,.75);outline-offset:3px}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
     button,a{font:inherit}
@@ -115,6 +115,7 @@
         <div class="hero-meta" id="hero-meta"></div>
       </div>
       <div class="hero-actions">
+        <button class="lang-toggle" id="lang-toggle" aria-label="일본어로 보기" title="日本語">🇯🇵</button>
         <button class="theme-toggle" id="theme-toggle" aria-label="화면 모드 전환" title="밝음/어두움 모드">🌙</button>
         <button class="share-btn" id="share-btn" aria-label="공유">↗</button>
       </div>
@@ -123,10 +124,10 @@
   </header>
   <main id="main"><div id="content"></div></main>
   <nav class="bottom-nav" id="bottom-nav">
-    <button class="nav-btn active" data-tab="sch"><span class="ico">🗓️</span><span>일정</span></button>
-    <button class="nav-btn" data-tab="chk"><span class="ico">✅</span><span>준비물</span></button>
-    <button class="nav-btn" data-tab="budget"><span class="ico">💳</span><span>예산</span></button>
-    <button class="nav-btn" data-tab="info"><span class="ico">ℹ️</span><span>정보</span></button>
+    <button class="nav-btn active" data-tab="sch"><span class="ico">🗓️</span><span id="nav-sch-label">일정</span></button>
+    <button class="nav-btn" data-tab="chk"><span class="ico">✅</span><span id="nav-chk-label">준비물</span></button>
+    <button class="nav-btn" data-tab="budget"><span class="ico">💳</span><span id="nav-budget-label">예산</span></button>
+    <button class="nav-btn" data-tab="info"><span class="ico">ℹ️</span><span id="nav-info-label">정보</span></button>
   </nav>
   <div class="toast" id="toast"></div>
 </div>
@@ -138,9 +139,40 @@
   const esc = (v='') => String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const uid = () => 'id_' + Math.random().toString(36).slice(2,10);
   let data = null;
-  const state = {tab:'sch', day:0, mode:'A', checks:{}, done:{}, budgetPaid:{}};
+  const state = {tab:'sch', day:0, mode:'A', lang:'ko', checks:{}, done:{}, budgetPaid:{}};
   const APPEARANCE_KEY = 'tripv2_appearance';
   let appearance = 'light';
+
+  const JA = {"tip1":{"text":"宿泊先予約済み！新宿二丁目2-15-25 松下ビルのAirbnb。確定した住所を移動ルートに反映済みです。"},"tip2":{"text":"金曜のバーは23時前後を目安に柔軟に。土曜は中野→代々木イルミネーション→21時前後に宿へ戻り、22〜23時ごろ二丁目へ。"},"tip3":{"text":"航空便以外の時刻・徒歩時間は計画上の目安です。土曜の「代々木フォレスト・オブ・ライツ」は有料イベントなので、12/19(土)の料金・残席は予約前に公式販売ページで再確認。"},"tip_breakfast":{"text":"6〜8時起床を想定。土曜は8時前後にしんぱち食堂、日曜は7:15ごろベローチェ。宿泊先の朝食は利用しない前提です。"},"d1":{"title":"到着 · 遅めの夕食 · 二丁目の夜","note":"金曜は移動と食事中心。バー開始は23時前後で柔軟に。"},"fri_flight":{"title":"仁川T1出発 · イースター航空 ZE607","desc":"航空予定：仁川国際空港 第1ターミナル 16:10 → 成田 第3ターミナル 19:00。エコノミー、受託手荷物15kg。空港手続きの時間を考えて早めに到着する。","note":"便の時刻・ターミナルは予約画面基準"},"fri_arrival":{"title":"成田T3到着 · 入国・手荷物受取","desc":"入国・手荷物受取・税関に45〜90分を想定。T3には鉄道駅がないため空港第2ビル駅へ移動。公式の徒歩案内は約10分、荷物や道探しを含め計画上は15〜20分。","note":"入国にかかる時間は目安"},"fri_train":{"title":"新宿へ移動 · 待ち時間を見て選択","desc":"基本はスカイライナー→日暮里→JR山手線→新宿。乗換込み65〜80分を目安。荷物を持って乗換を避けたい場合は新宿行きN'EX直通。公開時刻表の例では20:47→22:09で、金曜の夜が遅くなる可能性あり。JR新宿到着後は駅構内移動＋荷物を持って宿まで歩く時間としてさらに20〜30分確保。","transport":"スカイライナー+JR / N'EX直通から選択","cost":"スカイライナーオンライン2,310円+JR別 / N'EX往復5,200円","note":"20:15は移動開始の目標。列車は未予約"},"fri_hotel":{"title":"Airbnbチェックイン · 松下ビル","desc":"宿泊先：新宿2丁目15-25 松下ビル。12/18〜20の宿泊先として確定。空港から21:30〜22:40ごろ到着を想定。入室方法・階・部屋番号は予約案内を確認。二丁目の中心部(2-12周辺)まで徒歩約3〜5分の想定。","transport":"JR新宿到着後、駅構内移動+荷物を持って徒歩20〜30分想定","note":"予約済み。部屋の料金・面積・ベッド構成は未入力"},"fri_food":{"title":"遅めの夕食 · ラーメン凪 ゴールデン街本館","desc":"濃厚な煮干しラーメンを一杯。公式24時間営業、カウンター10席なので行列が長ければ時間にこだわらない。煮干しが好みでなければ、すしざんまい東新宿店へ変更可(11:00〜翌05:00、LO04:30)。","transport":"宿→ラーメン凪 ゴールデン街本館 徒歩約10〜15分想定","cost":"1人1,200〜1,800円の計画予算","note":"便の遅延や待ち時間が出たら夕食とバーを後ろ倒し"},"fri_bar":{"title":"新宿二丁目のバー · 23時前後","desc":"22〜23時スタート希望。初日は入国とチェックイン次第で22:30〜23:30の間に柔軟に開始。二丁目で過ごし、宿まで歩いて帰る流れ。","transport":"ラーメン後に二丁目へ。二丁目中心→宿は徒歩約3〜5分想定","note":"二丁目訪問は確定 / 店舗は未定"},"d2":{"title":"中野 · 光の森 · 冬のおでん · 二丁目","note":"朝は柔軟に。昼から中野で遊び、17:30 代々木フォレスト・オブ・ライツ → 新宿三丁目で温かい夕食 → 宿で休憩 → 二丁目。"},"sat_breakfast":{"title":"朝食 · しんぱち食堂 新宿御苑店","desc":"6〜8時起床に合わせて07:00〜08:30の間で柔軟に。7時開店の焼き魚定食店で、鮭または鯖の朝定食。宿から徒歩約5〜7分想定。6時台にすぐ食べたい場合は近くのすき家へ変更。食後は宿で準備し、10:20ごろ昼の予定へ。","transport":"食後はいったん宿へ戻って外出準備","cost":"1人700〜1,000円の計画予算 / 店頭価格は未確認","note":"週末含め07:00〜23:00・定休日なし。朝メニューあり。昼食との間隔を見て量を調整"},"sat_depart":{"title":"宿を出発 · 中野へ","desc":"新宿二丁目の宿からJR新宿駅方面へ移動し中野へ。朝を詰め込みすぎず、昼前に到着する流れ。","transport":"JR利用 / 当日の経路は地図で確認","note":"10:50は出発目標"},"sat_lunch":{"title":"昼食 · 中野ブロードウェイB1 うどんや大門","desc":"地下の小さなカウンターうどん店。讃岐うどんと天ぷらで軽く始め、そのまま館内散策へ。行列が長い・売切れの場合は中野駅周辺のラーメンや定食に変更。","transport":"中野駅北口→サンモール→ブロードウェイ 徒歩","cost":"1人1,000〜1,500円の計画予算","note":"土曜11:00〜15:00目安。小規模カウンターのため待つ可能性あり"},"sat_nakano":{"title":"中野ブロードウェイ · レトロ/サブカル探索","desc":"以前来たことがあるので全フロア制覇より、まんだらけ・レトロゲーム・昔のおもちゃ・時計・変わったコレクションを中心に。二人で「一番変な物探し」みたいに遊ぶのもあり。","transport":"館内とサンモール周辺を徒歩","note":"店舗ごとに営業時間が異なる場合あり"},"sat_chiko":{"title":"おやつ候補 · デイリーチコ 8段ソフトクリーム","desc":"ブロードウェイ地下の名物。二人で1つをシェアして写真を一枚。寒すぎたら無理せず省略してカフェへ。","transport":"ブロードウェイB1","cost":"おやつ1,000円以内の想定","note":"寒い日はオプション"},"sat_move_yoyogi":{"title":"中野 → 原宿・代々木公園","desc":"イルミネーション開始前に移動。中野からJRで代々木/新宿方面へ進み、原宿または明治神宮前からアクセス。入口の場所に合わせて当日経路を確認。","transport":"JR+徒歩 / 乗換は当日地図で確認","note":"17:10ごろ到着目標"},"sat_yoyogi_light":{"title":"✨ 代々木フォレスト・オブ・ライツ · 光と音の森","desc":"2026年初開催。代々木公園約1.8kmを歩きながら光と音の演出を楽しむ没入型イルミネーション。17:30〜22:00、最終入場21:00。普通の街路樹イルミより体験要素が強いので土曜のメインイベントに。","transport":"観覧60〜90分想定","cost":"有料 · 12/19(土)の料金は公式販売ページで再確認","note":"2026/11/13〜2027/1/11開催。自然環境・天候で見え方が変わる可能性あり"},"sat_return_shinjuku":{"title":"代々木公園 → 新宿三丁目へ戻る","desc":"明治神宮前駅から副都心線で新宿三丁目へ。宿と夕食場所が近いので、その後の移動を最小限に。","transport":"東京メトロ副都心線中心"},"sat_dinner":{"title":"夕食 · おでん屋たけし 新宿三丁目店","desc":"光の森を歩いた後は温かいおでんで締める。宿・二丁目に近く夜の動線がきれい。夜の予定があるのでここではお酒は軽めに。","transport":"新宿三丁目駅から徒歩","cost":"1人3,500〜5,000円の計画予算","note":"土曜の通常案内13:00〜23:30、LO23:00。公式では喫煙可店舗の表記あり"},"sat_rest":{"title":"宿へ戻る · シャワー&休憩","desc":"松下ビルのAirbnbへ戻って1時間以上休憩。買った物を置いて二丁目の夜に備える。","transport":"徒歩"},"sat_bar":{"title":"二丁目へ · 土曜の夜","desc":"宿が二丁目内なので長距離移動なし。体調に合わせて22〜23時の間に出発。","transport":"徒歩約3〜5分想定","note":"店舗は未定"},"d3":{"title":"午前に空港へ · 帰国","note":"07:15ごろ宿近くで朝食。08:20〜08:30に宿を出て、10時台に成田第1ターミナル到着を目標。"},"sun_breakfast":{"title":"朝食 · 宿近くのベローチェ","desc":"新宿一丁目北店(住所は新宿2-15-22)でサンドイッチを軽く。7時開店、モーニングは11時まで。宿から徒歩約1〜3分想定。07:15〜07:45に食べて宿へ戻り荷物整理、08:20〜08:30出発。8時起床なら前日に買ったパンなどを宿で簡単に食べる案も。","transport":"食後は宿へ戻って出発準備","cost":"モーニングセット550〜680円 / 単品350〜380円(公式メニュー、店舗差あり)","note":"Bセットは卵・燻製ベーコンサンド。セットドリンクはコーヒー・紅茶系。単品注文も可"},"sun_out":{"title":"Airbnbチェックアウト · JR新宿駅へ","desc":"簡単な朝食後、松下ビルの宿を08:20〜08:30に出発。JR新宿駅東側入口まで徒歩約15〜20分想定。N'EXホームまでの駅構内移動を含め合計25〜35分確保。09:05発の例を使う場合の計画なので、実際の列車確定後に調整。","transport":"宿→N'EXホームまで徒歩・駅構内移動 合計25〜35分想定","note":"Airbnbのチェックアウト方法は予約案内を確認"},"sun_train":{"title":"成田空港へ · N'EX時刻例","desc":"現在公開の土休日ダイヤ例：新宿09:05→成田空港駅(T1)10:28。出発前に12/20の実際の運行と指定席を確認。帰りはT1行きなので空港第2ビル駅で降りない。","transport":"N'EX直通 約83分の例","note":"時刻は予約前に確認する例 / 座席未予約"},"sun_airport":{"title":"成田T1 · チェックイン・出国","desc":"受託手荷物、保安検査、出国手続き。日曜午前の観光を追加せず空港移動に充てる。チェックインカウンターは当日の航空会社案内を確認。","note":"予約画面では出発T1"},"sun_flight":{"title":"成田T1出発 · エアソウル RS260","desc":"航空予定：成田 第1ターミナル 12:50 → 仁川 第2ターミナル 15:35。エコノミー、受託手荷物15kg。","note":"便の時刻・ターミナルは予約画面基準"},"sun_home":{"title":"仁川T2到着","desc":"帰国便は仁川第2ターミナル到着。帰宅交通を決める際に確認。"},"pack_passport":{"text":"パスポート","category":"必須"},"pack_booking":{"text":"航空券・宿泊予約をスマホにオフライン保存","category":"必須"},"pack_airbnb":{"text":"Airbnbのチェックイン案内・入口・ドアコードをスクショ保存","category":"宿"},"pack_vjw":{"text":"Visit Japan Web登録・QR画面を保存","category":"入国"},"pack_insurance":{"text":"海外旅行保険の証券・連絡先を保存","category":"安全"},"pack_esim":{"text":"eSIM・ローミング準備／日本到着後に通信確認","category":"通信"},"pack_payment":{"text":"海外決済カード + 少額の日本円現金","category":"支払い"},"pack_suica":{"text":"Suica/PASMOを準備・チャージ","category":"交通"},"pack_charger":{"text":"スマホ充電器・ケーブル","category":"電子機器"},"pack_adapter":{"text":"日本Aタイプ用変換プラグ","category":"電子機器"},"pack_powerbank":{"text":"モバイルバッテリー · 預けず機内持込","category":"電子機器"},"pack_meds":{"text":"常用薬・鎮痛薬など個人用の常備薬","category":"健康"},"pack_clothes":{"text":"下着・靴下・着替え","category":"衣類"},"pack_warm":{"text":"12月の防寒用品 · コート・マフラー/手袋など","category":"衣類"},"pack_toiletry":{"text":"洗面・シェービング用品","category":"生活"},"pack_umbrella":{"text":"小さい折りたたみ傘","category":"生活"},"b1":{"label":"空港往復でN'EX利用の場合","category":"1人・公式料金 / 他の交通手段なら修正"},"b2":{"label":"金曜ラーメン","category":"1人・計画予算"},"b_sat_breakfast":{"label":"土曜の朝定食","category":"1人・計画予算 / 店舗の確定価格ではない"},"b3":{"label":"土曜 中野ランチ","category":"1人・計画予算"},"b4":{"label":"土曜 おでん夕食","category":"1人・計画予算"},"b_illumination":{"label":"代々木フォレスト チケット予算","category":"1人・計画予算 · 土曜の実売価格を再確認"},"b5":{"label":"カフェ・おやつ","category":"1人・計画予算"},"b6":{"label":"東京都内交通","category":"1人・余裕分込みの計画予算"},"b7":{"label":"日曜 ベローチェ朝食","category":"1人・店舗差を考慮した計画予算"},"quick_lodging_map":{"label":"宿の地図を開く"},"quick_lodging_copy":{"label":"宿の住所をコピー"},"quick_papago":{"label":"Papago翻訳を開く · 韓国語↔日本語"},"quick_google_translate":{"label":"Google翻訳を開く · 韓国語→日本語"},"phrase_japanese":{"label":"コピー · 日本語があまり話せません"},"phrase_taxi":{"label":"コピー · この住所までお願いします"},"phrase_bill":{"label":"コピー · お会計をお願いします"},"phrase_toilet":{"label":"コピー · トイレはどこですか？"},"call_police":{"label":"警察 緊急電話 110"},"call_ambulance":{"label":"救急車・消防 119"},"call_jnto":{"label":"JNTO旅行者ホットライン · 韓国語対応24時間"},"_top":{"title":"バウ & ソンホン · 東京2泊3日","destination":"新宿二丁目 · 中野 · 代々木"}};
+  const UI_JA = {"title":"バウ & ソンホン · 東京2泊3日","destination":"新宿二丁目 · 中野 · 代々木","nav_sch":"日程","nav_chk":"持ち物","nav_budget":"予算","nav_info":"情報","trip_points":"✦ 旅行ポイント","today":"今日","schedule":"日程","complete":"完了","prev":"前日","next":"翌日","first_day":"最初の日です","last_day":"最終日です","common":"共通日程","map":"地図","copy":"コピー","link":"予約/リンク","time_unknown":"時間未定","no_title":"タイトルなし","no_plan":"このプランには予定がありません。","no_schedule":"登録された予定がありません。","items_check":"持ち物チェック","check_empty":"チェックリストが空です。","budget_total":"予算合計","paid":"支払済み","item":"項目","budget_empty":"予算項目がありません。","quick":"旅行中すぐ使う","info":"情報","call":"電話","view_map":"地図","view":"表示","open":"開く","info_empty":"登録情報がありません。","trip_in_progress":"旅行中 ✨","depart_today":"今日出発 ✈️","days_suffix":"日間","dark_to":"ダークモードへ","light_to":"ライトモードへ","dark_mode":"ダークモード","light_mode":"ライトモード","lang_button":"🇰🇷","lang_title":"한국어로 보기","share":"共有","copied":"コピーしました","place_copied":"場所をコピーしました","link_copied":"リンクをコピーしました","cannot_open":"このリンクは開けません","check_link":"リンク形式を確認してください","call_confirm":"電話をかけますか？"};
+  const UI_KO = {
+    nav_sch:'일정',nav_chk:'준비물',nav_budget:'예산',nav_info:'정보',
+    trip_points:'✦ 여행 포인트',today:'오늘',schedule:'일정',complete:'완료',
+    prev:'전날',next:'다음날',first_day:'첫날이에요',last_day:'마지막 날이에요',
+    common:'공통 일정',map:'지도',copy:'복사',link:'예약/링크',
+    time_unknown:'시간 미정',no_title:'제목 없음',no_plan:'이 플랜에는 일정이 없어요.',
+    no_schedule:'등록된 일정이 없어요.',items_check:'준비물 체크',
+    check_empty:'체크리스트가 비어 있어요.',budget_total:'예상 총액',paid:'결제 완료',
+    item:'항목',budget_empty:'예산 항목이 없어요.',quick:'여행 중 바로 쓰기',
+    info:'정보',call:'전화',view_map:'지도',view:'보기',open:'열기',info_empty:'등록된 정보가 없어요.',
+    trip_in_progress:'여행 중 ✨',depart_today:'오늘 출발 ✈️',days_suffix:'일',
+    dark_to:'어두움 모드로 전환',light_to:'밝음 모드로 전환',dark_mode:'어두움 모드',light_mode:'밝음 모드',
+    lang_button:'🇯🇵',lang_title:'日本語で見る',share:'공유',
+    copied:'복사했어요',place_copied:'장소를 복사했어요',link_copied:'링크를 복사했어요',
+    cannot_open:'열 수 없는 링크예요',check_link:'링크 형식을 확인해 주세요',
+    call_confirm:'통화 연결할까요?'
+  };
+  function ui(key){ return state.lang==='ja' ? (UI_JA[key] ?? UI_KO[key] ?? key) : (UI_KO[key] ?? key); }
+  function localize(obj, field){
+    if(!obj) return '';
+    if(state.lang==='ja' && obj.id && JA[obj.id] && JA[obj.id][field] != null) return JA[obj.id][field];
+    return obj[field] ?? '';
+  }
+  function topText(field){
+    if(state.lang==='ja' && JA._top && JA._top[field]) return JA._top[field];
+    return data?.[field] || '';
+  }
+
 
   function loadAppearance(){
     // Always start in light mode, regardless of OS/browser appearance or a previous visit.
@@ -152,8 +184,8 @@
     const btn=$('#theme-toggle');
     if(btn){
       btn.textContent = appearance==='dark' ? '☀️' : '🌙';
-      btn.setAttribute('aria-label', appearance==='dark' ? '밝음 모드로 전환' : '어두움 모드로 전환');
-      btn.title = appearance==='dark' ? '밝음 모드' : '어두움 모드';
+      btn.setAttribute('aria-label', appearance==='dark' ? ui('light_to') : ui('dark_to'));
+      btn.title = appearance==='dark' ? ui('light_mode') : ui('dark_mode');
     }
     const meta=document.querySelector('meta[name="theme-color"]');
     if(meta) meta.setAttribute('content', appearance==='dark' ? '#0f172a' : '#7c3aed');
@@ -217,6 +249,7 @@
       }
     }catch(e){ if(today >= 0) state.day = today; }
     state.day = Math.max(0, Math.min(state.day||0, Math.max(0,data.days.length-1)));
+    if(!['ko','ja'].includes(state.lang)) state.lang='ko';
     return true;
   }
 
@@ -230,7 +263,8 @@
   function formatDate(iso){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return iso||'';
     const d = new Date(iso+'T00:00:00');
-    return `${d.getMonth()+1}/${d.getDate()} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+    const names = state.lang==='ja' ? ['日','月','火','水','木','金','土'] : ['일','월','화','수','목','금','토'];
+    return `${d.getMonth()+1}/${d.getDate()} (${names[d.getDay()]})`;
   }
   function tripLength(){
     if(data.startDate && data.endDate){
@@ -244,8 +278,8 @@
     const today=new Date(); today.setHours(0,0,0,0);
     const s=new Date(data.startDate+'T00:00:00'); const e=data.endDate?new Date(data.endDate+'T00:00:00'):s;
     const diff=Math.round((s-today)/86400000);
-    if(today>=s&&today<=e) return '여행 중 ✨';
-    if(diff===0) return '오늘 출발 ✈️';
+    if(today>=s&&today<=e) return ui('trip_in_progress');
+    if(diff===0) return ui('depart_today');
     if(diff>0) return `D-${diff}`;
     return '';
   }
@@ -260,10 +294,17 @@
   }
   function renderChrome(){
     document.body.className = 'theme-' + (data.theme||'sky');
+    document.documentElement.lang = state.lang==='ja' ? 'ja' : 'ko';
     applyAppearance();
-    $('#title').textContent=data.title; $('#destination').textContent=data.destination||'TRIP GUIDE';
-    const parts=[]; if(data.startDate) parts.push(`${formatDate(data.startDate)}${data.endDate&&data.endDate!==data.startDate?' ~ '+formatDate(data.endDate):''}`); if(tripLength()) parts.push(`${tripLength()}일`); const dd=ddayText(); if(dd) parts.push(dd);
+    const titleText=topText('title') || data.title;
+    const destinationText=topText('destination') || data.destination || 'TRIP GUIDE';
+    $('#title').textContent=titleText; $('#destination').textContent=destinationText;
+    document.title=titleText;
+    const parts=[]; if(data.startDate) parts.push(`${formatDate(data.startDate)}${data.endDate&&data.endDate!==data.startDate?' ~ '+formatDate(data.endDate):''}`); if(tripLength()) parts.push(`${tripLength()}${ui('days_suffix')}`); const dd=ddayText(); if(dd) parts.push(dd);
     $('#hero-meta').innerHTML = parts.map(x=>`<span>${esc(x)}</span>`).join('<span>•</span>');
+    $('#nav-sch-label').textContent=ui('nav_sch'); $('#nav-chk-label').textContent=ui('nav_chk'); $('#nav-budget-label').textContent=ui('nav_budget'); $('#nav-info-label').textContent=ui('nav_info');
+    const langBtn=$('#lang-toggle'); if(langBtn){langBtn.textContent=ui('lang_button');langBtn.title=ui('lang_title');langBtn.setAttribute('aria-label',ui('lang_title'));}
+    $('#share-btn').setAttribute('aria-label',ui('share'));
     const sw=$('#plan-switch');
     if(data.useMulti){
       const plans=[['A',data.planA||'Plan A'],['B',data.planB||'Plan B'],['C',data.planC||'Plan C']].filter(([k,n])=>k==='A'||n);
@@ -279,23 +320,23 @@
     else c.innerHTML=renderInfo();
   }
   function renderSchedule(){
-    if(!data.days.length) return `<div class="card"><div class="empty">등록된 일정이 없어요.</div></div>`;
+    if(!data.days.length) return `<div class="card"><div class="empty">${esc(ui('no_schedule'))}</div></div>`;
     const todayIdx=findTodayIndex();
     const tabs=data.days.map((d,i)=>`<button class="day-btn ${i===state.day?'active':''}" data-day="${i}">Day ${i+1}<br><span style="font-weight:650;opacity:.72">${esc(formatDate(d.date))}</span></button>`).join('');
     const day=data.days[state.day]||data.days[0], evs=currentPlanEvents(day);
     const total=evs.length, done=evs.filter(e=>state.done[e.id]).length, pct=total?Math.round(done/total*100):0;
-    const head=`<div class="today-bar"><div class="day-tabs">${tabs}</div>${todayIdx>=0?`<button class="today-btn" data-day="${todayIdx}">오늘</button>`:''}</div>
-      ${data.tips.length?`<div class="card tips"><div class="tips-title">✦ 여행 포인트</div>${data.tips.filter(t=>t.text).map(t=>`<div class="tip">${esc(t.text)}</div>`).join('')}</div>`:''}
-      <div class="card"><div class="day-head"><div class="day-date">DAY ${state.day+1} · ${esc(formatDate(day.date))}</div><div class="day-title">${esc(day.title||'오늘의 일정')}</div>${day.note?`<div class="day-note">${esc(day.note)}</div>`:''}<div class="progress"><span style="width:${pct}%"></span></div><div class="progress-text">일정 ${done}/${total} 완료</div></div><div class="timeline">`;
-    const body=evs.length?evs.map(e=>renderEvent(e)).join(''):`<div class="empty">이 플랜에는 일정이 없어요.</div>`;
+    const head=`<div class="today-bar"><div class="day-tabs">${tabs}</div>${todayIdx>=0?`<button class="today-btn" data-day="${todayIdx}">${esc(ui('today'))}</button>`:''}</div>
+      ${data.tips.length?`<div class="card tips"><div class="tips-title">${esc(ui('trip_points'))}</div>${data.tips.filter(t=>t.text).map(t=>`<div class="tip">${esc(localize(t,'text'))}</div>`).join('')}</div>`:''}
+      <div class="card"><div class="day-head"><div class="day-date">DAY ${state.day+1} · ${esc(formatDate(day.date))}</div><div class="day-title">${esc(localize(day,'title')||ui('schedule'))}</div>${day.note?`<div class="day-note">${esc(localize(day,'note'))}</div>`:''}<div class="progress"><span style="width:${pct}%"></span></div><div class="progress-text">${esc(ui('schedule'))} ${done}/${total} ${esc(ui('complete'))}</div></div><div class="timeline">`;
+    const body=evs.length?evs.map(e=>renderEvent(e)).join(''):`<div class="empty">${esc(ui('no_plan'))}</div>`;
     const previous=data.days[state.day-1], next=data.days[state.day+1];
-    const pager=`<nav class="day-pager" aria-label="일정 날짜 이동">
+    const pager=`<nav class="day-pager" aria-label="${esc(state.lang==='ja'?'日程の日付移動':'일정 날짜 이동')}">
       <button type="button" class="day-pager-btn previous" ${previous?`data-day="${state.day-1}"`:'disabled'}>
         <span class="day-pager-arrow" aria-hidden="true">←</span>
-        <span class="day-pager-copy"><strong>전날</strong><small>${previous?esc(formatDate(previous.date)):'첫날이에요'}</small></span>
+        <span class="day-pager-copy"><strong>${esc(ui('prev'))}</strong><small>${previous?esc(formatDate(previous.date)):esc(ui('first_day'))}</small></span>
       </button>
       <button type="button" class="day-pager-btn next" ${next?`data-day="${state.day+1}"`:'disabled'}>
-        <span class="day-pager-copy"><strong>다음날</strong><small>${next?esc(formatDate(next.date)):'마지막 날이에요'}</small></span>
+        <span class="day-pager-copy"><strong>${esc(ui('next'))}</strong><small>${next?esc(formatDate(next.date)):esc(ui('last_day'))}</small></span>
         <span class="day-pager-arrow" aria-hidden="true">→</span>
       </button>
       <p class="day-pager-position">DAY ${state.day+1} / ${data.days.length}</p>
@@ -304,24 +345,25 @@
   }
   function renderEvent(e){
     const done=!!state.done[e.id];
-    const chips=[]; if(e.isCommon) chips.push(`<span class="chip common">공통 일정</span>`); if(e.transport) chips.push(`<span class="chip transport">🚆 ${esc(e.transport)}</span>`); if(e.cost) chips.push(`<span class="chip cost">💴 ${esc(e.cost)}</span>`); if(e.note) chips.push(`<span class="chip note">⚠ ${esc(e.note)}</span>`);
-    const acts=[]; if(e.map) acts.push(`<button class="action primary" data-map="${esc(e.map)}">📍 지도</button>`); if(e.map) acts.push(`<button class="action" data-copy="${esc(e.map)}">복사</button>`); if(e.link) acts.push(`<button class="action" data-link="${esc(e.link)}">🔗 예약/링크</button>`);
-    return `<div class="event ${done?'done':''}"><div class="event-icon">${esc(e.icon||'📍')}</div><div class="event-main"><div class="event-top"><span class="time">${esc(e.time||'시간 미정')}</span><button class="event-done-btn" data-done="${esc(e.id)}" aria-label="완료">${done?'✓':''}</button></div><div class="event-title">${esc(e.title||'제목 없음')}</div>${e.desc?`<div class="event-desc">${esc(e.desc)}</div>`:''}${chips.length?`<div class="chips">${chips.join('')}</div>`:''}${acts.length?`<div class="actions">${acts.join('')}</div>`:''}</div></div>`;
+    const transport=localize(e,'transport'), cost=localize(e,'cost'), note=localize(e,'note');
+    const chips=[]; if(e.isCommon) chips.push(`<span class="chip common">${esc(ui('common'))}</span>`); if(transport) chips.push(`<span class="chip transport">🚆 ${esc(transport)}</span>`); if(cost) chips.push(`<span class="chip cost">💴 ${esc(cost)}</span>`); if(note) chips.push(`<span class="chip note">⚠ ${esc(note)}</span>`);
+    const acts=[]; if(e.map) acts.push(`<button class="action primary" data-map="${esc(e.map)}">📍 ${esc(ui('map'))}</button>`); if(e.map) acts.push(`<button class="action" data-copy="${esc(e.map)}">${esc(ui('copy'))}</button>`); if(e.link) acts.push(`<button class="action" data-link="${esc(e.link)}">🔗 ${esc(ui('link'))}</button>`);
+    return `<div class="event ${done?'done':''}"><div class="event-icon">${esc(e.icon||'📍')}</div><div class="event-main"><div class="event-top"><span class="time">${esc(e.time||ui('time_unknown'))}</span><button class="event-done-btn" data-done="${esc(e.id)}" aria-label="${esc(ui('complete'))}">${done?'✓':''}</button></div><div class="event-title">${esc(localize(e,'title')||ui('no_title'))}</div>${e.desc?`<div class="event-desc">${esc(localize(e,'desc'))}</div>`:''}${chips.length?`<div class="chips">${chips.join('')}</div>`:''}${acts.length?`<div class="actions">${acts.join('')}</div>`:''}</div></div>`;
   }
   function renderChecks(){
     const list=(data.checks||[]).filter(c=>!data.useMulti || (c.plans||['A','B','C']).includes(state.mode));
     const done=list.filter(c=>state.checks[c.id]).length;
-    return `<div class="card"><div class="section-title">준비물 체크 · ${done}/${list.length} 완료</div>${list.length?list.map(c=>`<div class="check-row ${state.checks[c.id]?'checked':''}"><button class="check-btn" data-check="${esc(c.id)}">${state.checks[c.id]?'✓':''}</button><div class="check-text">${esc(c.text)}</div>${c.category?`<span class="tag">${esc(c.category)}</span>`:''}</div>`).join(''):`<div class="empty">체크리스트가 비어 있어요.</div>`}</div>`;
+    return `<div class="card"><div class="section-title">${esc(ui('items_check'))} · ${done}/${list.length} ${esc(ui('complete'))}</div>${list.length?list.map(c=>`<div class="check-row ${state.checks[c.id]?'checked':''}"><button class="check-btn" data-check="${esc(c.id)}">${state.checks[c.id]?'✓':''}</button><div class="check-text">${esc(localize(c,'text'))}</div>${c.category?`<span class="tag">${esc(localize(c,'category'))}</span>`:''}</div>`).join(''):`<div class="empty">${esc(ui('check_empty'))}</div>`}</div>`;
   }
-  function money(n){ return new Intl.NumberFormat('ko-KR').format(Number(n)||0) + ' ' + esc(data.currency||''); }
+  function money(n){ return new Intl.NumberFormat(state.lang==='ja'?'ja-JP':'ko-KR').format(Number(n)||0) + ' ' + esc(data.currency||''); }
   function renderBudget(){
     const list=data.budgets||[]; const total=list.reduce((s,b)=>s+(Number(b.amount)||0),0); const paid=list.reduce((s,b)=>s+((state.budgetPaid[b.id]??b.paid)?(Number(b.amount)||0):0),0);
-    return `<div class="card"><div class="budget-summary"><div class="metric"><small>예상 총액</small><strong>${money(total)}</strong></div><div class="metric"><small>결제 완료</small><strong>${money(paid)}</strong></div></div>${list.length?list.map(b=>{const p=state.budgetPaid[b.id]??b.paid;return `<div class="budget-row ${p?'paid':''}" data-budget="${esc(b.id)}"><div style="flex:1"><div class="budget-name">${esc(b.label||'항목')}</div>${b.category?`<div class="budget-cat">${esc(b.category)}</div>`:''}</div><div class="budget-amt">${money(b.amount)}</div></div>`}).join(''):`<div class="empty">예산 항목이 없어요.</div>`}</div>`;
+    return `<div class="card"><div class="budget-summary"><div class="metric"><small>${esc(ui('budget_total'))}</small><strong>${money(total)}</strong></div><div class="metric"><small>${esc(ui('paid'))}</small><strong>${money(paid)}</strong></div></div>${list.length?list.map(b=>{const p=state.budgetPaid[b.id]??b.paid;return `<div class="budget-row ${p?'paid':''}" data-budget="${esc(b.id)}"><div style="flex:1"><div class="budget-name">${esc(localize(b,'label')||ui('item'))}</div>${b.category?`<div class="budget-cat">${esc(localize(b,'category'))}</div>`:''}</div><div class="budget-amt">${money(b.amount)}</div></div>`}).join(''):`<div class="empty">${esc(ui('budget_empty'))}</div>`}</div>`;
   }
   function renderInfo(){
-    const list=data.infos||[]; return `<div class="card"><div class="section-title">여행 중 바로 쓰기</div>${list.length?list.map(i=>{const icon=i.type==='tel'?'📞':i.type==='map'?'📍':i.type==='copy'?'📋':i.type==='text'?'📝':'🔗';const go=i.type==='tel'?'전화':i.type==='map'?'지도':i.type==='copy'?'복사':i.type==='text'?'보기':'열기';return `<div class="info-row" data-info="${esc(i.id)}"><div class="info-icon">${icon}</div><div class="info-text"><div class="info-label">${esc(i.label||'정보')}</div><div class="info-val">${esc(i.val||'')}</div></div><span class="go">${go}</span></div>`}).join(''):`<div class="empty">등록된 정보가 없어요.</div>`}</div>`;
+    const list=data.infos||[]; return `<div class="card"><div class="section-title">${esc(ui('quick'))}</div>${list.length?list.map(i=>{const icon=i.type==='tel'?'📞':i.type==='map'?'📍':i.type==='copy'?'📋':i.type==='text'?'📝':'🔗';const go=i.type==='tel'?ui('call'):i.type==='map'?ui('view_map'):i.type==='copy'?ui('copy'):i.type==='text'?ui('view'):ui('open');return `<div class="info-row" data-info="${esc(i.id)}"><div class="info-icon">${icon}</div><div class="info-text"><div class="info-label">${esc(localize(i,'label')||ui('info'))}</div><div class="info-val">${esc(i.val||'')}</div></div><span class="go">${esc(go)}</span></div>`}).join(''):`<div class="empty">${esc(ui('info_empty'))}</div>`}</div>`;
   }
-  function safeOpen(url){ try{ const u=new URL(url,location.href); if(['http:','https:'].includes(u.protocol)) window.open(u.href,'_blank','noopener'); else toast('열 수 없는 링크예요'); }catch(e){ toast('링크 형식을 확인해 주세요'); } }
+  function safeOpen(url){ try{ const u=new URL(url,location.href); if(['http:','https:'].includes(u.protocol)) window.open(u.href,'_blank','noopener'); else toast(ui('cannot_open')); }catch(e){ toast(ui('check_link')); } }
   function openMap(q){
     if(/^https?:\/\//i.test(q)) safeOpen(q);
     else window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener');
@@ -345,16 +387,17 @@
       alert('이 HTML은 기기에 저장된 여행 파일이에요. 공개 웹주소가 만들어지는 것은 아니에요. HTML 파일 자체를 보내거나, 방금 저장한 JSON 백업을 상대방의 편집기에서 불러오세요.');
       return;
     }
-    const payload={title:data.title,text:(data.destination?data.destination+' · ':'')+data.title,url:location.href};
+    const shareTitle=topText('title')||data.title; const shareDest=topText('destination')||data.destination; const payload={title:shareTitle,text:(shareDest?shareDest+' · ':'')+shareTitle,url:location.href};
     if(navigator.share){try{await navigator.share(payload);return}catch(e){if(e.name==='AbortError')return}}
-    try{await navigator.clipboard.writeText(location.href);toast('링크를 복사했어요')}catch(e){prompt('링크를 복사하세요',location.href)}
+    try{await navigator.clipboard.writeText(location.href);toast(ui('link_copied'))}catch(e){prompt('링크를 복사하세요',location.href)}
   }
   async function handleInfo(id){
     const i=data.infos.find(x=>x.id===id); if(!i)return;
-    if(i.type==='tel'){ if(confirm(`${i.label}\n${i.val}\n\n통화 연결할까요?`)) location.href='tel:'+i.val; }
+    const label=localize(i,'label')||i.label;
+    if(i.type==='tel'){ if(confirm(`${label}\n${i.val}\n\n${ui('call_confirm')}`)) location.href='tel:'+i.val; }
     else if(i.type==='map') openMap(i.val);
-    else if(i.type==='copy'){ try{await navigator.clipboard.writeText(i.val); toast('복사했어요');}catch(e){prompt('복사하세요',i.val);} }
-    else if(i.type==='text') alert(`${i.label}\n\n${i.val}`);
+    else if(i.type==='copy'){ try{await navigator.clipboard.writeText(i.val); toast(ui('copied'));}catch(e){prompt(ui('copy'),i.val);} }
+    else if(i.type==='text') alert(`${label}\n\n${i.val}`);
     else if(i.val) safeOpen(i.val);
   }
   document.addEventListener('click', async e=>{
@@ -373,10 +416,11 @@
     const bud=e.target.closest('[data-budget]'); if(bud){const b=data.budgets.find(x=>x.id===bud.dataset.budget);const cur=state.budgetPaid[b.id]??b.paid;state.budgetPaid[b.id]=!cur;render();saveState();return}
     const map=e.target.closest('[data-map]'); if(map){openMap(map.dataset.map);return}
     const link=e.target.closest('[data-link]'); if(link){safeOpen(link.dataset.link);return}
-    const copy=e.target.closest('[data-copy]'); if(copy){try{await navigator.clipboard.writeText(copy.dataset.copy);toast('장소를 복사했어요')}catch(err){}return}
+    const copy=e.target.closest('[data-copy]'); if(copy){try{await navigator.clipboard.writeText(copy.dataset.copy);toast(ui('place_copied'))}catch(err){}return}
     const inf=e.target.closest('[data-info]'); if(inf){await handleInfo(inf.dataset.info);return}
   });
   $('#share-btn').addEventListener('click',share);
+  $('#lang-toggle').addEventListener('click',()=>{state.lang=state.lang==='ja'?'ko':'ja';render();saveState();$('#main').scrollTop=0;});
   $('#theme-toggle').addEventListener('click',toggleAppearance);
   loadAppearance();
   applyAppearance();
