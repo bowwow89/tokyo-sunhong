@@ -14,6 +14,31 @@
       --shadow:0 8px 30px rgba(15,23,42,.08); --radius:18px;
       --safe-bottom:max(14px, env(safe-area-inset-bottom));
     }
+
+    body.dark-mode{
+      --bg:#0f172a; --card:#172033; --text:#f8fafc; --muted:#a8b2c3; --line:#2b3648;
+      --primary:#60a5fa; --primary-soft:#172a46; --danger:#f87171; --ok:#34d399;
+      --shadow:0 8px 30px rgba(0,0,0,.32);
+    }
+    body.dark-mode .app{background:var(--bg)}
+    body.dark-mode .day-btn{background:var(--card);color:#cbd5e1}
+    body.dark-mode .day-btn.active{background:#f8fafc;color:#111827;border-color:#f8fafc}
+    body.dark-mode .today-btn{background:var(--primary-soft);color:var(--primary)}
+    body.dark-mode .progress{background:#263246}
+    body.dark-mode .tip{color:#c3cad6}
+    body.dark-mode .event+.event,body.dark-mode .check-row,body.dark-mode .info-row,body.dark-mode .budget-row{border-color:#253044}
+    body.dark-mode .event-icon,body.dark-mode .chip,body.dark-mode .action,body.dark-mode .info-icon,body.dark-mode .metric{background:#202b3d;border-color:#2e3a4f;color:#d8dee9}
+    body.dark-mode .time,body.dark-mode .tag{background:#222e41;color:#d6deea}
+    body.dark-mode .event-done-btn,body.dark-mode .check-btn{background:#172033;border-color:#526079}
+    body.dark-mode .chip.transport{background:#153329;color:#6ee7b7;border-color:#20543e}
+    body.dark-mode .chip.cost{background:#3a2a17;color:#fdba74;border-color:#5b3b19}
+    body.dark-mode .chip.note{background:#3a2028;color:#fda4af;border-color:#5b2b36}
+    body.dark-mode .chip.common{background:#3b3219;color:#fde68a;border-color:#5c4b1d}
+    body.dark-mode .bottom-nav{background:rgba(15,23,42,.92);border-color:#273246}
+    body.dark-mode .landing-card{background:var(--card)}
+    .hero-actions{display:flex;gap:8px;flex:0 0 auto}
+    .theme-toggle{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.24);border-radius:12px;min-width:42px;height:42px;display:grid;place-items:center;cursor:pointer;font-size:18px}
+    .theme-toggle:focus-visible,.share-btn:focus-visible{outline:3px solid rgba(255,255,255,.75);outline-offset:3px}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
     button,a{font:inherit}
@@ -93,7 +118,10 @@
         <h1 id="title">여행 가이드</h1>
         <div class="hero-meta" id="hero-meta"></div>
       </div>
-      <button class="share-btn" id="share-btn" aria-label="공유">↗</button>
+      <div class="hero-actions">
+        <button class="theme-toggle" id="theme-toggle" aria-label="화면 모드 전환" title="밝음/어두움 모드">🌙</button>
+        <button class="share-btn" id="share-btn" aria-label="공유">↗</button>
+      </div>
     </div>
     <div class="plan-switch" id="plan-switch" hidden></div>
   </header>
@@ -115,6 +143,29 @@
   const uid = () => 'id_' + Math.random().toString(36).slice(2,10);
   let data = null;
   const state = {tab:'sch', day:0, mode:'A', checks:{}, done:{}, budgetPaid:{}};
+  const APPEARANCE_KEY = 'tripv2_appearance';
+  let appearance = 'light';
+
+  function loadAppearance(){
+    try{ appearance = localStorage.getItem(APPEARANCE_KEY) || 'light'; }catch(e){ appearance='light'; }
+    if(appearance!=='dark') appearance='light';
+  }
+  function applyAppearance(){
+    document.body.classList.toggle('dark-mode', appearance==='dark');
+    const btn=$('#theme-toggle');
+    if(btn){
+      btn.textContent = appearance==='dark' ? '☀️' : '🌙';
+      btn.setAttribute('aria-label', appearance==='dark' ? '밝음 모드로 전환' : '어두움 모드로 전환');
+      btn.title = appearance==='dark' ? '밝음 모드' : '어두움 모드';
+    }
+    const meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', appearance==='dark' ? '#0f172a' : '#7c3aed');
+  }
+  function toggleAppearance(){
+    appearance = appearance==='dark' ? 'light' : 'dark';
+    try{ localStorage.setItem(APPEARANCE_KEY, appearance); }catch(e){}
+    applyAppearance();
+  }
 
   function normalize(raw){
     raw = raw && typeof raw === 'object' ? raw : {};
@@ -212,6 +263,7 @@
   }
   function renderChrome(){
     document.body.className = 'theme-' + (data.theme||'sky');
+    applyAppearance();
     $('#title').textContent=data.title; $('#destination').textContent=data.destination||'TRIP GUIDE';
     const parts=[]; if(data.startDate) parts.push(`${formatDate(data.startDate)}${data.endDate&&data.endDate!==data.startDate?' ~ '+formatDate(data.endDate):''}`); if(tripLength()) parts.push(`${tripLength()}일`); const dd=ddayText(); if(dd) parts.push(dd);
     $('#hero-meta').innerHTML = parts.map(x=>`<span>${esc(x)}</span>`).join('<span>•</span>');
@@ -327,6 +379,9 @@
     const inf=e.target.closest('[data-info]'); if(inf){handleInfo(inf.dataset.info);return}
   });
   $('#share-btn').addEventListener('click',share);
+  $('#theme-toggle').addEventListener('click',toggleAppearance);
+  loadAppearance();
+  applyAppearance();
   // Standalone files need no CDN. Load LZ-String only for an older #data link.
   if(location.hash.startsWith('#data=') && !window.LZString){
     const script=document.createElement('script');
